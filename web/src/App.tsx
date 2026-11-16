@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { type CardData, type SkinId, SKINS } from './types/card';
 import { storage } from './services/storage';
 import { Card3DViewer } from './components/Card3DViewer';
@@ -6,24 +6,30 @@ import { PublicCardView } from './components/PublicCardView';
 import { WalletDrawer } from './components/WalletDrawer';
 import { QRExchangeModal } from './components/QRExchangeModal';
 import { EditCardModal } from './components/EditCardModal';
+import { SkinSlotCarousel } from './components/SkinSlotCarousel';
 import { Toast } from './components/Toast';
 import {
-  Menu,
   RotateCw,
   QrCode,
   Edit3,
   Plus,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
-  Sparkles,
-  X
+  ChevronUp,
+  X,
+  Share2,
+  Trash2,
+  FolderHeart
 } from 'lucide-react';
 
 export default function App() {
   const [myCards, setMyCards] = useState<CardData[]>(() => storage.getMyCards());
+  // activeIdx: -1이면 '+' 새 명함 제작 슬롯, 0 이상이면 보유 명함 인덱스
   const [activeIdx, setActiveIdx] = useState<number>(() => storage.getActiveCardIndex());
   const [isFlipped, setIsFlipped] = useState(false);
+
+  // 안드로이드 바텀 시트 상태 (false = 홈 디폴트 9:16 뷰, true = 커스텀/부가기능 시트 오픈 16:9 뷰)
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   // 모달 상태
   const [isWalletOpen, setIsWalletOpen] = useState(false);
@@ -37,6 +43,9 @@ export default function App() {
 
   // 퍼블릭 뷰 모드 검사 (?u=username 또는 ?c=id)
   const [publicCard, setPublicCard] = useState<CardData | null>(null);
+
+  // 터치 제스처 좌표 추적
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -60,47 +69,88 @@ export default function App() {
     }
   }, []);
 
-  const activeCard = myCards[activeIdx] || myCards[0];
+  const activeCard = activeIdx >= 0 ? (myCards[activeIdx] || myCards[0]) : myCards[0];
 
-  // 다음 / 이전 명함 전환
+  // 좌우 캐러셀: 왼쪽으로 넘기면 '+' 슬롯(-1), 오른쪽으로 넘기면 그동안 제작한 명함들(0, 1, 2...)
   const handlePrevCard = useCallback(() => {
     setActiveIdx((prev) => {
-      const next = prev > 0 ? prev - 1 : myCards.length - 1;
-      storage.setActiveCardIndex(next);
-      return next;
+      // 만약 0번 카드에서 왼쪽으로 넘기면 '+' 새 명함 슬롯(-1)으로 이동
+      if (prev === 0) return -1;
+      if (prev === -1) return myCards.length - 1; // 맨 끝 카드로
+      return prev - 1;
     });
     setIsFlipped(false);
   }, [myCards.length]);
 
   const handleNextCard = useCallback(() => {
     setActiveIdx((prev) => {
-      const next = prev < myCards.length - 1 ? prev + 1 : 0;
-      storage.setActiveCardIndex(next);
-      return next;
+      // '+' 슬롯(-1)에서 오른쪽으로 넘기면 0번 카드로
+      if (prev === -1) return 0;
+      if (prev >= myCards.length - 1) return -1; // 끝에서 오른쪽으로 넘기면 '+' 슬롯
+      return prev + 1;
     });
     setIsFlipped(false);
   }, [myCards.length]);
 
-  // 스킨 롤링 변경
-  const handleCycleSkin = useCallback((direction: 'next' | 'prev') => {
-    if (!activeCard) return;
-    const currentSkinIdx = SKINS.findIndex((s) => s.id === activeCard.skinId);
-    let nextIdx = direction === 'next' ? currentSkinIdx + 1 : currentSkinIdx - 1;
-    if (nextIdx >= SKINS.length) nextIdx = 0;
-    if (nextIdx < 0) nextIdx = SKINS.length - 1;
-
-    const newSkinId: SkinId = SKINS[nextIdx].id;
+  // 상하 캐러셀 / 제스처를 통한 스킨 변경 (현재 카드에 실시간 끼워맞추기)
+  const handleSelectSkin = useCallback((newSkinId: SkinId) => {
+    if (!activeCard || activeIdx < 0) return;
     const updatedCards = myCards.map((c, i) => {
       if (i === activeIdx) {
         return { ...c, skinId: newSkinId };
       }
       return c;
     });
-
     setMyCards(updatedCards);
     storage.saveMyCards(updatedCards);
-    showToast(`✨ 스킨 변경: ${SKINS[nextIdx].name}`);
+    const skinName = SKINS.find(s => s.id === newSkinId)?.name || newSkinId;
+    showToast(`✨ '${skinName}' 스킨이 장착되었습니다!`);
   }, [activeCard, activeIdx, myCards, showToast]);
+
+  const handleCycleSkin = useCallback((direction: 'next' | 'prev') => {
+    if (!activeCard || activeIdx < 0) return;
+    const currentSkinIdx = SKINS.findIndex((s) => s.id === activeCard.skinId);
+    let nextIdx = direction === 'next' ? currentSkinIdx + 1 : currentSkinIdx - 1;
+    if (nextIdx >= SKINS.length) nextIdx = 0;
+    if (nextIdx < 0) nextIdx = SKINS.length - 1;
+    handleSelectSkin(SKINS[nextIdx].id);
+  }, [activeCard, activeIdx, handleSelectSkin]);
+
+  // 터치 스와이프 제스처 핸들러 (좌우 캐러셀 & 상하 스킨 교체)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || e.changedTouches.length === 0) return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    // 가로 스와이프 (좌우 캐러셀)
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx > 0) {
+        handlePrevCard();
+      } else {
+        handleNextCard();
+      }
+    }
+    // 세로 스와이프 (상하 스킨 캐러셀 or 시트 열기)
+    else if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 40) {
+      if (!isSheetOpen && dy < -40) {
+        // 홈 디폴트 상태에서 위로 스와이프 시 바텀 시트 열기
+        setIsSheetOpen(true);
+      } else if (isSheetOpen) {
+        if (dy > 0) {
+          handleCycleSkin('next');
+        } else {
+          handleCycleSkin('prev');
+        }
+      }
+    }
+  };
 
   // 키보드 단축키
   useEffect(() => {
@@ -118,6 +168,8 @@ export default function App() {
       } else if (e.key === ' ' || e.key === 'Spacebar') {
         e.preventDefault();
         setIsFlipped((prev) => !prev);
+      } else if (e.key === 'Escape') {
+        setIsSheetOpen(false);
       }
     };
 
@@ -141,7 +193,7 @@ export default function App() {
     if (existingIdx >= 0) {
       updated = [...myCards];
       updated[existingIdx] = card;
-      showToast(`✏️ '${card.name}'님의 명함 정보가 수정되었습니다.`);
+      showToast(`✏️ '${card.name}'님의 명함이 수정되었습니다.`);
     } else {
       updated = [...myCards, card];
       setActiveIdx(updated.length - 1);
@@ -152,14 +204,40 @@ export default function App() {
     storage.saveMyCards(updated);
   };
 
-  // 만약 퍼블릭 카드 뷰 모드라면 바로 PublicCardView 렌더링
+  // 명함 삭제
+  const handleDeleteActiveCard = () => {
+    if (myCards.length <= 1) {
+      showToast('⚠️ 최소 1개의 명함은 유지되어야 합니다.');
+      return;
+    }
+    if (!window.confirm(`'${activeCard.name}'님의 명함을 삭제하시겠습니까?`)) return;
+    const updated = myCards.filter((_, idx) => idx !== activeIdx);
+    const nextIdx = Math.max(0, activeIdx - 1);
+    setMyCards(updated);
+    setActiveIdx(nextIdx);
+    storage.saveMyCards(updated);
+    storage.setActiveCardIndex(nextIdx);
+    showToast('🗑️ 명함이 삭제되었습니다.');
+  };
+
+  // 공유 링크 복사
+  const handleCopyShareLink = () => {
+    if (!activeCard) return;
+    const url = `${window.location.origin}${window.location.pathname}?u=${encodeURIComponent(activeCard.uniqueCode || activeCard.id)}`;
+    navigator.clipboard.writeText(url).then(() => {
+      showToast('🔗 명함 공유 링크가 클립보드에 복사되었습니다!');
+    }).catch(() => {
+      showToast(`공유 링크: ${url}`);
+    });
+  };
+
+  // 퍼블릭 카드 뷰 모드
   if (publicCard) {
     return (
       <div className="w-full h-dvh max-w-md mx-auto relative overflow-hidden bg-[#0d0e15] shadow-2xl flex flex-col">
         <PublicCardView
           card={publicCard}
           onGoToApp={() => {
-            // URL 파라미터 제거 후 일반 앱 모드로 전환
             window.history.pushState({}, '', window.location.pathname);
             setPublicCard(null);
           }}
@@ -170,156 +248,280 @@ export default function App() {
     );
   }
 
-  const currentSkinMeta = SKINS.find((s) => s.id === activeCard?.skinId) || SKINS[0];
+  const isCreatingNewSlot = activeIdx === -1;
 
   return (
-    <div className="w-full h-dvh max-w-md mx-auto relative overflow-hidden bg-[#0d0e15] text-white flex flex-col font-sans select-none shadow-2xl border-x border-white/5">
-      {/* 1. 상단 헤더 바 */}
-      <header className="shrink-0 flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-[#0d0e15]/80 backdrop-blur-md z-20">
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className="w-full h-dvh max-w-md mx-auto relative overflow-hidden bg-[#0c0d14] text-white flex flex-col font-sans select-none shadow-2xl border-x border-white/5"
+    >
+      {/* 1. 안드로이드 최적화 앰비언트 글로우 배경 */}
+      <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl z-0" />
+      <div className="pointer-events-none absolute -bottom-24 left-1/2 -translate-x-1/2 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl z-0" />
+
+      {/* 2. 우측 상단 X 닫기 버튼: 바텀 시트 열림 모드일 때 항상 표시되어 홈 디폴트 화면으로 즉시 복귀 */}
+      {isSheetOpen && (
         <button
-          onClick={() => setIsWalletOpen(true)}
-          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors border border-white/10"
-          title="명함첩 열기"
+          onClick={() => setIsSheetOpen(false)}
+          className="absolute top-4 right-4 z-40 p-2.5 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/20 text-slate-200 hover:text-white active:scale-90 transition-all shadow-xl shadow-black/40"
+          title="홈 디폴트 화면으로 나가기"
         >
-          <Menu className="w-5 h-5 text-sky-400" />
+          <X className="w-5 h-5 stroke-[2.5]" />
         </button>
-
-        <div className="text-center">
-          <h1 className="text-sm font-bold tracking-tight text-white flex items-center justify-center gap-1.5">
-            <span>CardFlip 3D</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          </h1>
-          <span className="text-[10px] font-semibold tracking-wider text-sky-400/90 uppercase">
-            DIGITAL WALLET MVP
-          </span>
-        </div>
-
-        <button
-          onClick={() => setIsFlipped((prev) => !prev)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 text-xs font-medium text-slate-200 transition-all border border-white/10"
-          title="앞뒷면 180° 뒤집기"
-        >
-          <RotateCw className="w-3.5 h-3.5 text-sky-400" />
-          <span>{isFlipped ? '앞면' : '뒷면'}</span>
-        </button>
-      </header>
-
-      {/* 2. 2축 제스처 가이드 힌트 배지 */}
-      <div className="absolute top-16 inset-x-0 z-10 flex justify-between px-4 pointer-events-none text-[11px] text-slate-400">
-        <button
-          onClick={handlePrevCard}
-          className="pointer-events-auto flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-colors"
-        >
-          <ChevronLeft className="w-3.5 h-3.5 text-sky-400" />
-          <span>이전</span>
-        </button>
-
-        <button
-          onClick={() => handleCycleSkin('next')}
-          className="pointer-events-auto flex items-center gap-1 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-colors text-sky-300"
-        >
-          <Sparkles className="w-3 h-3 text-amber-400" />
-          <span>스킨 변경 (↑/↓)</span>
-        </button>
-
-        <button
-          onClick={handleNextCard}
-          className="pointer-events-auto flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-colors"
-        >
-          <span>다음</span>
-          <ChevronRight className="w-3.5 h-3.5 text-sky-400" />
-        </button>
-      </div>
-
-      {/* 3. 메인 3D 카드 스테이지 */}
-      <main className="relative flex-1 flex flex-col items-center justify-center min-h-0 overflow-hidden">
-        {activeCard && (
-          <Card3DViewer
-            card={activeCard}
-            skinId={activeCard.skinId}
-            isFlipped={isFlipped}
-            onFlipToggle={() => setIsFlipped((prev) => !prev)}
-            className="w-full h-full"
-          />
-        )}
-      </main>
-
-      {/* 4. 스마트 하이퍼링크 독 */}
-      {activeCard?.links && activeCard.links.length > 0 && (
-        <div className="shrink-0 px-5 py-2 z-10 flex items-center gap-2 overflow-x-auto scrollbar-none">
-          {activeCard.links.map((link, idx) => (
-            <a
-              key={idx}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-sky-300 whitespace-nowrap transition-colors"
-            >
-              <span>{link.label}</span>
-              <ExternalLink className="w-3 h-3 opacity-60" />
-            </a>
-          ))}
-        </div>
       )}
 
-      {/* 5. 하단 플로팅 컨트롤 바 */}
-      <footer className="shrink-0 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-white/10 bg-[#12131f]/95 backdrop-blur-xl z-20 flex items-center justify-between">
-        {/* 명함 슬라이드 인디케이터 & 수정 버튼 */}
-        <div className="flex items-center gap-1.5">
-          <div className="px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-slate-300">
-            {activeIdx + 1} / {myCards.length}
-          </div>
-          <button
-            onClick={() => {
-              setEditingCard(activeCard);
-              setIsEditOpen(true);
-            }}
-            className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition-colors"
-            title="명함 수정"
-          >
-            <Edit3 className="w-4 h-4 text-sky-400" />
-          </button>
-        </div>
-
-        {/* 중앙 플로팅 QR 교환 버튼 */}
-        <div className="relative -top-3">
-          <button
-            onClick={() => setIsExchangeOpen(true)}
-            className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 p-0.5 shadow-xl shadow-sky-500/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
-            title="QR 코드 교환"
-          >
-            <div className="w-full h-full rounded-[14px] bg-[#12131f]/40 backdrop-blur-sm flex items-center justify-center text-white">
-              <QrCode className="w-7 h-7" />
-            </div>
-          </button>
-        </div>
-
-        {/* 새 명함 만들기 & 현재 스킨 표시 */}
-        <div className="flex items-center gap-1.5">
-          <button
+      {/* 3. 메인 히어로 섹션
+          - 디폴트 상태: flex-1 전체 화면을 꽉 채우며 9:16 비율 화면에 길고 크게 가로로 나타남 (isLarge=true)
+          - 바텀 시트 오픈 상태: 상단 히어로 섹션에 16:9 비율로 컴팩트하게 자리잡음 (isLarge=false)
+      */}
+      <main
+        className={`relative w-full transition-all duration-500 ease-out flex flex-col items-center justify-center overflow-hidden z-10 ${
+          isSheetOpen
+            ? 'shrink-0 aspect-[16/9] min-h-[220px] max-h-[250px] pt-2'
+            : 'flex-1 h-full min-h-0'
+        }`}
+      >
+        {/* '+' 새 명함 만들기 슬롯인 경우 */}
+        {isCreatingNewSlot ? (
+          <div
             onClick={() => {
               setEditingCard(null);
               setIsEditOpen(true);
             }}
-            className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition-colors"
-            title="새 명함 추가"
+            className="w-[85%] aspect-[1.58] rounded-2xl border-2 border-dashed border-sky-400/60 bg-gradient-to-tr from-sky-500/10 to-indigo-500/10 hover:bg-sky-500/20 backdrop-blur-md flex flex-col items-center justify-center gap-3 cursor-pointer group active:scale-95 transition-all shadow-2xl"
           >
-            <Plus className="w-4 h-4 text-emerald-400" />
+            <div className="w-14 h-14 rounded-2xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-400 group-hover:scale-110 transition-transform">
+              <Plus className="w-8 h-8" />
+            </div>
+            <div className="text-center">
+              <span className="text-sm font-bold text-white block">새 명함 만들기</span>
+              <span className="text-xs text-sky-300/80 font-medium block mt-0.5">
+                탭하여 새로운 페르소나 명함을 추가하세요
+              </span>
+            </div>
+          </div>
+        ) : (
+          /* 기존 명함 3D 뷰어 렌더링 */
+          activeCard && (
+            <div className="w-full h-full relative">
+              <Card3DViewer
+                card={activeCard}
+                skinId={activeCard.skinId}
+                isFlipped={isFlipped}
+                isLarge={!isSheetOpen}
+                onFlipToggle={() => setIsFlipped((prev) => !prev)}
+                className="w-full h-full"
+              />
+
+              {/* 3D 명함 앞/뒷면 뒤집기 빠른 액션 힌트 칩 (디폴트 홈 모드에서 표시) */}
+              {!isSheetOpen && (
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-auto">
+                  <button
+                    onClick={() => setIsFlipped((prev) => !prev)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 text-xs text-slate-300 font-medium active:scale-95 transition-all"
+                  >
+                    <RotateCw className="w-3.5 h-3.5 text-sky-400" />
+                    <span>{isFlipped ? '앞면 보기' : '뒷면 보기'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        )}
+
+        {/* 바텀 시트 열림 상태일 때의 좌우 캐러셀 내비게이션 화살표 */}
+        {isSheetOpen && (
+          <div className="pointer-events-none absolute inset-x-2 top-1/2 -translate-y-1/2 flex justify-between z-30">
+            <button
+              onClick={handlePrevCard}
+              className="pointer-events-auto p-2 rounded-full bg-black/50 hover:bg-black/75 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all"
+              title="이전 명함 / 새 명함 (+)"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleNextCard}
+              className="pointer-events-auto p-2 rounded-full bg-black/50 hover:bg-black/75 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all"
+              title="다음 명함"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* 바텀 시트 열림 상태일 때의 좌우 캐러셀 인디케이터 (왼쪽 + 슬롯 및 카드들) */}
+        {isSheetOpen && (
+          <div className="absolute bottom-2 inset-x-0 flex items-center justify-center gap-1.5 z-20">
+            {/* 맨 왼쪽: '+' 새 명함 슬롯 버튼 */}
+            <button
+              onClick={() => setActiveIdx(-1)}
+              className={`px-2 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-0.5 transition-all ${
+                activeIdx === -1
+                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/40 scale-105'
+                  : 'bg-white/10 text-slate-400 hover:text-white'
+              }`}
+            >
+              <Plus className="w-3 h-3" />
+              <span>새 명함</span>
+            </button>
+
+            {/* 보유 명함 인디케이터 도트/칩 */}
+            {myCards.map((c, i) => (
+              <button
+                key={c.id}
+                onClick={() => setActiveIdx(i)}
+                className={`h-2 rounded-full transition-all ${
+                  activeIdx === i
+                    ? 'w-6 bg-sky-400 shadow-md shadow-sky-400/50'
+                    : 'w-2 bg-white/20 hover:bg-white/40'
+                }`}
+                title={c.name}
+              />
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* 4. 디폴트 홈 화면의 바텀 영역
+          - 탑바와 바텀 네비가 모두 삭제된 상태
+          - 바텀에는 오직 QR 촬영 버튼과, 바텀 시트를 끌어올릴 수 있는 슬림 핸들만 존재
+      */}
+      {!isSheetOpen && (
+        <footer className="shrink-0 w-full px-6 pt-2 pb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col items-center gap-3.5 z-20">
+          {/* 중앙 강조 안드로이드 스타일 QR 촬영 버튼 */}
+          <button
+            onClick={() => setIsExchangeOpen(true)}
+            className="flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-600 to-purple-600 hover:opacity-95 active:scale-95 text-white font-bold text-sm shadow-2xl shadow-sky-500/30 border border-white/20 transition-all"
+            title="QR 코드 촬영 및 교환"
+          >
+            <QrCode className="w-5 h-5 text-sky-200" />
+            <span className="tracking-wide">QR 코드 촬영 / 교환</span>
           </button>
 
+          {/* 바텀 시트를 위로 끌어올리는 안드로이드 제스처 핸들 & 가이드 */}
           <div
-            onClick={() => handleCycleSkin('next')}
-            className="cursor-pointer px-3 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium flex items-center gap-1.5 transition-colors"
-            title="클릭하여 스킨 변경"
+            onClick={() => setIsSheetOpen(true)}
+            className="w-full flex flex-col items-center justify-center pt-1 pb-1 cursor-pointer group active:opacity-75"
           >
-            <span
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: currentSkinMeta.color }}
-            />
-            <span className="text-slate-300 truncate max-w-[65px]">{currentSkinMeta.name}</span>
+            <div className="w-12 h-1.5 rounded-full bg-white/30 group-hover:bg-white/60 transition-colors mb-2" />
+            <span className="text-xs font-semibold text-slate-400 group-hover:text-white flex items-center gap-1 transition-colors">
+              <ChevronUp className="w-3.5 h-3.5 text-sky-400 animate-bounce" />
+              <span>위로 끌어올려 명함 커스텀 & 설정</span>
+            </span>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
+
+      {/* 5. 안드로이드 바텀 시트 (끌어올렸을 때 열리는 커스텀 & 부가기능 패널) */}
+      {isSheetOpen && (
+        <section
+          className="flex-1 w-full bg-[#12131f]/95 backdrop-blur-2xl rounded-t-[28px] border-t border-white/15 flex flex-col overflow-hidden shadow-2xl z-30 animate-in slide-in-from-bottom duration-300"
+        >
+          {/* 바텀 시트 드래그 핸들 (누르면 닫기) */}
+          <div
+            onClick={() => setIsSheetOpen(false)}
+            className="w-full pt-3 pb-2 flex flex-col items-center justify-center cursor-pointer group"
+          >
+            <div className="w-12 h-1.5 rounded-full bg-white/30 group-hover:bg-white/60 transition-colors" />
+            <span className="text-[10px] text-slate-500 mt-1 font-medium group-hover:text-slate-300">
+              아래로 내려 홈으로 돌아가기
+            </span>
+          </div>
+
+          {/* 시트 내부 스크롤 콘텐츠 영역 */}
+          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 scrollbar-none">
+            {/* A. 상하 캐러셀: 명함과 같은 사이즈의 직사각형 색깔 네모들이 현재 명함에 끼워맞춰 지면서 색깔 변경 */}
+            {activeCard && !isCreatingNewSlot && (
+              <SkinSlotCarousel
+                card={activeCard}
+                activeSkinId={activeCard.skinId}
+                onSelectSkin={handleSelectSkin}
+              />
+            )}
+
+            {/* B. 명함 커스텀 & 부가 기능 액션 바 */}
+            {activeCard && !isCreatingNewSlot && (
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-slate-400 px-2 flex items-center justify-between">
+                  <span>명함 관리 및 부가 기능</span>
+                  <span className="text-[10px] text-sky-400 font-mono">
+                    {activeIdx + 1} / {myCards.length}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {/* 명함 정보 수정 */}
+                  <button
+                    onClick={() => {
+                      setEditingCard(activeCard);
+                      setIsEditOpen(true);
+                    }}
+                    className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 active:scale-95 transition-all"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-sky-400" />
+                    <span>정보 수정</span>
+                  </button>
+
+                  {/* 앞/뒷면 뒤집기 */}
+                  <button
+                    onClick={() => setIsFlipped((prev) => !prev)}
+                    className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 active:scale-95 transition-all"
+                  >
+                    <RotateCw className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>{isFlipped ? '앞면 보기' : '뒷면 보기'}</span>
+                  </button>
+
+                  {/* 공유 링크 복사 */}
+                  <button
+                    onClick={handleCopyShareLink}
+                    className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 active:scale-95 transition-all"
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>링크 복사</span>
+                  </button>
+
+                  {/* 명함 삭제 (카드가 2장 이상일 때만 활성화) */}
+                  <button
+                    onClick={handleDeleteActiveCard}
+                    disabled={myCards.length <= 1}
+                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-semibold active:scale-95 transition-all ${
+                      myCards.length > 1
+                        ? 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-300'
+                        : 'bg-white/5 border-white/5 text-slate-600 cursor-not-allowed'
+                    }`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <span>명함 삭제</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* C. 바텀 시트 하단 네비게이션: 교환한 명함첩 보기 버튼 */}
+          <div className="shrink-0 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-white/10 bg-[#0c0d14]/90 backdrop-blur-md flex items-center justify-between gap-3">
+            {/* 다른 사람과 교환한 명함첩 버튼 */}
+            <button
+              onClick={() => setIsWalletOpen(true)}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-sky-600/40 via-indigo-600/40 to-purple-600/40 hover:from-sky-600/60 hover:to-purple-600/60 border border-sky-400/30 text-xs font-bold text-white shadow-lg active:scale-98 transition-all"
+              title="교환한 명함 지갑 열기"
+            >
+              <FolderHeart className="w-4 h-4 text-sky-300" />
+              <span>교환한 명함첩 보기</span>
+            </button>
+
+            {/* QR 촬영 모달 버튼 */}
+            <button
+              onClick={() => setIsExchangeOpen(true)}
+              className="p-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-slate-200 active:scale-95 transition-all"
+              title="QR 스캔 및 교환"
+            >
+              <QrCode className="w-5 h-5 text-sky-400" />
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* --- 모달 및 서랍 컴포넌트들 --- */}
 
@@ -390,7 +592,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 글로벌 토스트 알림 */}
+      {/* 글로벌 안드로이드 스타일 토스트 알림 */}
       <Toast message={toastMessage} />
     </div>
   );

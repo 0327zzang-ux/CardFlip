@@ -9,6 +9,7 @@ interface Card3DViewerProps {
   onFlipToggle?: () => void;
   className?: string;
   allowDrag?: boolean;
+  isLarge?: boolean;
 }
 
 export const Card3DViewer: React.FC<Card3DViewerProps> = ({
@@ -17,7 +18,8 @@ export const Card3DViewer: React.FC<Card3DViewerProps> = ({
   isFlipped = false,
   onFlipToggle,
   className = '',
-  allowDrag = true
+  allowDrag = true,
+  isLarge = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardMeshRef = useRef<THREE.Mesh | null>(null);
@@ -25,6 +27,8 @@ export const Card3DViewer: React.FC<Card3DViewerProps> = ({
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const animFrameId = useRef<number | null>(null);
+  const isLargeRef = useRef(isLarge);
+  isLargeRef.current = isLarge;
 
   // 물리 회전 상태
   const isDragging = useRef(false);
@@ -104,6 +108,12 @@ export const Card3DViewer: React.FC<Card3DViewerProps> = ({
     const animate = () => {
       animFrameId.current = requestAnimationFrame(animate);
 
+      if (cameraRef.current) {
+        // isLarge에 따른 카메라 줌 거리 부드러운 전환 (디폴트 홈: 4.9로 크고 웅장함, 바텀시트: 6.8로 컴팩트)
+        const targetZ = isLargeRef.current ? 4.9 : 6.8;
+        cameraRef.current.position.z += (targetZ - cameraRef.current.position.z) * 0.1;
+      }
+
       if (cardMeshRef.current) {
         currentRotation.current.x += (targetRotation.current.x + gyroOffset.current.x - currentRotation.current.x) * 0.1;
         currentRotation.current.y += (targetRotation.current.y + gyroOffset.current.y - currentRotation.current.y) * 0.1;
@@ -119,16 +129,18 @@ export const Card3DViewer: React.FC<Card3DViewerProps> = ({
     };
     animate();
 
-    // 리사이즈 핸들러
-    const handleResize = () => {
-      if (!container || !camera || !renderer) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    };
-    window.addEventListener('resize', handleResize);
+    // 컨테이너 크기 변화를 실시간 감지하는 ResizeObserver
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width: w, height: h } = entry.contentRect;
+        if (w > 0 && h > 0 && cameraRef.current && rendererRef.current) {
+          cameraRef.current.aspect = w / h;
+          cameraRef.current.updateProjectionMatrix();
+          rendererRef.current.setSize(w, h);
+        }
+      }
+    });
+    resizeObserver.observe(container);
 
     // 자이로스코프 센서
     const handleOrientation = (e: DeviceOrientationEvent) => {
@@ -143,7 +155,7 @@ export const Card3DViewer: React.FC<Card3DViewerProps> = ({
 
     return () => {
       if (animFrameId.current) cancelAnimationFrame(animFrameId.current);
-      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       if (window.DeviceOrientationEvent) {
         window.removeEventListener('deviceorientation', handleOrientation);
       }
