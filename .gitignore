@@ -1,0 +1,19 @@
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Processing build outputs
+CardFlip/application.windows32/
+CardFlip/application.windows64/
+CardFlip/application.linux32/
+CardFlip/application.linux64/
+CardFlip/application.macosx/
