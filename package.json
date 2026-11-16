@@ -1,0 +1,10 @@
+{
+  "name": "cardflip-project",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "build:sync": "npm --prefix web run build:sync"
+  }
+}

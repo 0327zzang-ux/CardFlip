@@ -11,6 +11,15 @@ $RECYCLE.BIN/
 *.swp
 *.swo
 
+# Node / Web build files
+node_modules/
+**/node_modules/
+web/dist/
+dist/
+.env
+.env.local
+.env.*.local
+
 # Processing build outputs
 CardFlip/application.windows32/
 CardFlip/application.windows64/
