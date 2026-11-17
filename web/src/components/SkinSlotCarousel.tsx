@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { type CardData, type SkinId, SKINS } from '../types/card';
 import { Check, Sparkles, ChevronUp, ChevronDown } from 'lucide-react';
+import { SkinPlateVisual } from './SkinPlateVisual';
 
 interface SkinSlotCarouselProps {
   card: CardData;
@@ -148,80 +149,4 @@ export const SkinSlotCarousel: React.FC<SkinSlotCarouselProps> = ({
   );
 };
 
-// --- 스킨별 미니 카드 플레이트 시각적 표현 컴포넌트 ---
-interface SkinPlateVisualProps {
-  skinId: SkinId;
-  card: CardData;
-}
 
-const SkinPlateVisual: React.FC<SkinPlateVisualProps> = ({ skinId, card }) => {
-  switch (skinId) {
-    case 'hologram':
-      return (
-        <div className="w-full h-full relative bg-gradient-to-tr from-purple-700 via-pink-600 via-sky-500 to-indigo-800 p-3 flex flex-col justify-between">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/30 via-transparent to-black/30" />
-          <div className="flex justify-between items-center z-10">
-            <span className="text-[10px] font-black tracking-widest text-white/90">PRISM-3D</span>
-            <span className="text-[9px] font-mono text-white/70">{card.uniqueCode}</span>
-          </div>
-          <div className="z-10">
-            <span className="text-xs font-extrabold text-white">{card.name}</span>
-          </div>
-        </div>
-      );
-    case 'matte':
-      return (
-        <div className="w-full h-full relative bg-gradient-to-br from-[#1b1c23] to-[#0d0e14] p-3 border border-white/10 flex flex-col justify-between">
-          <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:8px_8px]" />
-          <div className="flex justify-between items-center z-10">
-            <span className="text-[10px] font-black tracking-widest text-slate-400">OBSIDIAN</span>
-            <span className="text-[9px] font-mono text-slate-500">{card.uniqueCode}</span>
-          </div>
-          <div className="z-10">
-            <span className="text-xs font-bold text-slate-100">{card.name}</span>
-          </div>
-        </div>
-      );
-    case 'glass':
-      return (
-        <div className="w-full h-full relative bg-gradient-to-br from-sky-400/25 via-indigo-500/20 to-purple-600/30 backdrop-blur-md p-3 border border-cyan-400/30 flex flex-col justify-between">
-          <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-cyan-400/20 blur-xl" />
-          <div className="flex justify-between items-center z-10">
-            <span className="text-[10px] font-black tracking-widest text-cyan-200">FROSTED GLASS</span>
-            <span className="text-[9px] font-mono text-cyan-300/80">{card.uniqueCode}</span>
-          </div>
-          <div className="z-10">
-            <span className="text-xs font-bold text-white">{card.name}</span>
-          </div>
-        </div>
-      );
-    case 'neon':
-      return (
-        <div className="w-full h-full relative bg-[#090b14] p-3 border border-cyan-400/50 shadow-[inset_0_0_12px_rgba(6,182,212,0.3)] flex flex-col justify-between">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#06b6d415_1px,transparent_1px),linear-gradient(to_bottom,#06b6d415_1px,transparent_1px)] bg-[size:12px_12px]" />
-          <div className="flex justify-between items-center z-10">
-            <span className="text-[10px] font-black tracking-widest text-cyan-400">CYBER NEON</span>
-            <span className="text-[9px] font-mono text-fuchsia-400">{card.uniqueCode}</span>
-          </div>
-          <div className="z-10">
-            <span className="text-xs font-bold text-cyan-300">{card.name}</span>
-          </div>
-        </div>
-      );
-    case 'gold':
-      return (
-        <div className="w-full h-full relative bg-gradient-to-tr from-[#996515] via-[#d4af37] via-[#f7e39a] to-[#aa771c] p-3 text-slate-900 flex flex-col justify-between">
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.4)_0%,transparent_50%,rgba(0,0,0,0.2)_100%)]" />
-          <div className="flex justify-between items-center z-10">
-            <span className="text-[10px] font-black tracking-widest text-amber-950">CHAMPAGNE GOLD</span>
-            <span className="text-[9px] font-mono text-amber-900">{card.uniqueCode}</span>
-          </div>
-          <div className="z-10">
-            <span className="text-xs font-black text-amber-950">{card.name}</span>
-          </div>
-        </div>
-      );
-    default:
-      return null;
-  }
-};

@@ -91,6 +91,45 @@ export const WalletDrawer: React.FC<WalletDrawerProps> = ({
     });
   }, [cards, searchQuery, activeTab]);
 
+  // 실시간 제스처 오프셋 (좌측 드래그 시 서랍 닫기 1:1 트래킹 & 50% 임계값 스냅)
+  const [dragX, setDragX] = useState<number>(0);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const drawerTouchStartRef = React.useRef<{ x: number; y: number } | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    drawerTouchStartRef.current = { x: e.clientX, y: e.clientY };
+    setIsDragging(false);
+    setDragX(0);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!drawerTouchStartRef.current) return;
+    const dx = e.clientX - drawerTouchStartRef.current.x;
+    const dy = e.clientY - drawerTouchStartRef.current.y;
+    // 가로 드래그 판별
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+      setIsDragging(true);
+      if (dx < 0) {
+        setDragX(dx);
+      } else {
+        setDragX(dx * 0.15);
+      }
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (!drawerTouchStartRef.current) return;
+    drawerTouchStartRef.current = null;
+    setIsDragging(false);
+
+    // 50% 임계값: 서랍 폭의 절반(~140px) 기준으로 스냅 닫기 혹은 스냅 백
+    if (dragX < -140) {
+      onClose();
+    }
+    setDragX(0);
+  };
+
   // 소속별/직무별 그룹핑
   const groupedCards = useMemo(() => {
     if (activeTab !== 'affiliation' && activeTab !== 'occupation') return null;
@@ -108,7 +147,17 @@ export const WalletDrawer: React.FC<WalletDrawerProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-[#13141f] border-r border-white/10 flex flex-col h-full text-white shadow-2xl relative animate-in slide-in-from-left duration-300">
+      <div
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{
+          transform: `translateX(${dragX}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1)'
+        }}
+        className="w-full max-w-md bg-[#13141f] border-r border-white/10 flex flex-col h-full text-white shadow-2xl relative select-none touch-none"
+      >
         {/* 헤더 */}
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -145,11 +194,10 @@ export const WalletDrawer: React.FC<WalletDrawerProps> = ({
         <div className="flex items-center px-5 gap-1.5 border-b border-white/10 pb-2.5 pt-1 overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('all')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              activeTab === 'all'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'all'
                 ? 'bg-sky-500 text-white font-semibold shadow-md shadow-sky-500/20'
                 : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
-            }`}
+              }`}
           >
             <Layers className="w-3.5 h-3.5" />
             <span>전체</span>
@@ -157,11 +205,10 @@ export const WalletDrawer: React.FC<WalletDrawerProps> = ({
 
           <button
             onClick={() => setActiveTab('affiliation')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              activeTab === 'affiliation'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'affiliation'
                 ? 'bg-sky-500 text-white font-semibold shadow-md shadow-sky-500/20'
                 : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
-            }`}
+              }`}
           >
             <Building className="w-3.5 h-3.5" />
             <span>소속별</span>
@@ -169,11 +216,10 @@ export const WalletDrawer: React.FC<WalletDrawerProps> = ({
 
           <button
             onClick={() => setActiveTab('occupation')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              activeTab === 'occupation'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'occupation'
                 ? 'bg-sky-500 text-white font-semibold shadow-md shadow-sky-500/20'
                 : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
-            }`}
+              }`}
           >
             <Briefcase className="w-3.5 h-3.5" />
             <span>직무별</span>
@@ -181,11 +227,10 @@ export const WalletDrawer: React.FC<WalletDrawerProps> = ({
 
           <button
             onClick={() => setActiveTab('starred')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              activeTab === 'starred'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'starred'
                 ? 'bg-amber-500 text-white font-semibold shadow-md shadow-amber-500/20'
                 : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
-            }`}
+              }`}
           >
             <Star className="w-3.5 h-3.5" />
             <span>즐겨찾기</span>
@@ -303,9 +348,8 @@ const CardListItem: React.FC<CardListItemProps> = ({
             title="즐겨찾기"
           >
             <Star
-              className={`w-4 h-4 ${
-                card.isStarred ? 'text-amber-400 fill-amber-400' : 'text-slate-500 hover:text-slate-300'
-              }`}
+              className={`w-4 h-4 ${card.isStarred ? 'text-amber-400 fill-amber-400' : 'text-slate-500 hover:text-slate-300'
+                }`}
             />
           </button>
           <button
