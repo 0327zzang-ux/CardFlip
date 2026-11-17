@@ -59,6 +59,14 @@ export const QRExchangeModal: React.FC<QRExchangeModalProps> = ({
   const startCamera = async () => {
     setCameraError(null);
     try {
+      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        setCameraError('HTTP(Wi-Fi IP) 환경에서는 브라우저 보안 규정상 인앱 카메라 권한이 차단됩니다.');
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError('브라우저에서 카메라 접근 API를 지원하지 않거나 보안 컨텍스트(HTTPS)가 필요합니다.');
+        return;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' }
       });
@@ -66,9 +74,16 @@ export const QRExchangeModal: React.FC<QRExchangeModalProps> = ({
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn('Camera access error:', err);
-      setCameraError('카메라를 사용할 수 없거나 권한이 차단되었습니다.');
+      const errorObj = err as { name?: string };
+      if (errorObj?.name === 'NotAllowedError' || errorObj?.name === 'PermissionDeniedError') {
+        setCameraError('브라우저 설정에서 카메라 권한이 차단되었습니다. 주소창 좌측 설정 아이콘을 눌러 카메라를 [허용]으로 변경해주세요.');
+      } else if (errorObj?.name === 'NotFoundError' || errorObj?.name === 'DevicesNotFoundError') {
+        setCameraError('기기에 연결된 웹캠/카메라 장치를 찾을 수 없습니다.');
+      } else {
+        setCameraError('카메라를 사용할 수 없거나 권한이 차단되었습니다.');
+      }
     }
   };
 
@@ -79,25 +94,29 @@ export const QRExchangeModal: React.FC<QRExchangeModalProps> = ({
     }
   };
 
-  // 고유 ID로 명함 교환 실행
-  const handleExchangeById = (codeToSearch?: string) => {
-    const code = codeToSearch || exchangeId;
-    if (!code.trim()) {
-      onShowToast('교환할 상대방의 고유 ID(예: @minsu_ui)를 입력해주세요.');
+  // 고유 ID로 명함 교환 실행 (로컬스토리지 + 서버 실시간 조회)
+  const handleExchangeById = async (codeToSearch?: string) => {
+    const code = (codeToSearch || exchangeId).trim();
+    if (!code) {
+      onShowToast('교환할 상대방의 고유 ID(예: @my_id)를 입력해주세요.');
       return;
     }
 
-    const matchedCard = storage.findCardByCode(code);
-    if (!matchedCard) {
-      onShowToast(`해당 ID('${code}')의 명함을 찾을 수 없습니다.`);
-      return;
-    }
+    try {
+      const matchedCard = await storage.findCardByCodeAsync(code);
+      if (!matchedCard) {
+        onShowToast(`해당 ID('${code}')의 명함을 찾을 수 없습니다. (스마트폰에서 명함 생성 후 같은 Wi-Fi 확인)`);
+        return;
+      }
 
-    // 내 지갑에 저장
-    storage.addExchangedCard(matchedCard, '고유 ID 교환 완료');
-    onExchangeSuccess(matchedCard);
-    onShowToast(`🎉 '${matchedCard.name}'님의 명함 교환이 완료되었습니다!`);
-    onClose();
+      // 내 지갑에 저장
+      storage.addExchangedCard(matchedCard, '고유 ID 교환 완료');
+      onExchangeSuccess(matchedCard);
+      onShowToast(`🎉 '${matchedCard.name}'님의 명함 교환이 완료되었습니다!`);
+      onClose();
+    } catch {
+      onShowToast(`명함 조회 중 오류가 발생했습니다.`);
+    }
   };
 
   // 1초 테스트 QR 자동 시뮬레이션
@@ -216,34 +235,52 @@ export const QRExchangeModal: React.FC<QRExchangeModalProps> = ({
         {/* 탭 2: 카메라로 스캔 */}
         {tab === 'camera' && (
           <div className="flex flex-col items-center py-2 space-y-3">
-            <div className="relative w-full h-48 bg-black/60 rounded-2xl overflow-hidden border border-white/10 flex items-center justify-center">
+            <div className="relative w-full h-44 bg-black/60 rounded-2xl overflow-hidden border border-white/10 flex items-center justify-center">
               {cameraError ? (
-                <div className="text-center px-4 text-xs text-rose-300">
-                  {cameraError}
+                <div className="text-center px-4 py-3 flex flex-col items-center justify-center gap-1.5">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-sm font-bold">
+                    !
+                  </div>
+                  <div className="text-[11px] text-amber-200/90 leading-relaxed font-medium">
+                    {cameraError}
+                  </div>
+                  <div className="text-[10px] text-slate-400 pt-1">
+                    스마트폰의 <strong>기본 카메라 앱</strong>으로 상대방 QR을 비추면 바로 열립니다.
+                  </div>
                 </div>
               ) : (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  {/* 뷰파인더 가이드라인 & 레이저 애니메이션 */}
+                  <div className="absolute inset-4 border-2 border-dashed border-sky-400/80 rounded-xl pointer-events-none flex items-center justify-center">
+                    <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-sky-400 to-transparent animate-pulse" />
+                  </div>
+                </>
               )}
-
-              {/* 뷰파인더 가이드라인 & 레이저 애니메이션 */}
-              <div className="absolute inset-6 border-2 border-dashed border-sky-400/80 rounded-xl pointer-events-none flex items-center justify-center">
-                <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-sky-400 to-transparent animate-pulse" />
-              </div>
             </div>
 
-            <button
-              onClick={handleSimulateTestQR}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-xs font-bold shadow-lg shadow-sky-500/20 transition-all"
-            >
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>[시연용] 1초 테스트 QR 자동 인식</span>
-            </button>
+            <div className="w-full space-y-2">
+              <button
+                onClick={handleSimulateTestQR}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-xs font-bold shadow-lg shadow-sky-500/20 transition-all cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>[시연용] 1초 테스트 QR 자동 인식 교환</span>
+              </button>
+
+              <button
+                onClick={() => setTab('id')}
+                className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] text-slate-300 hover:text-white transition-colors cursor-pointer"
+              >
+                상대방 고유 ID(@ID)로 직접 교환하기 ➔
+              </button>
+            </div>
           </div>
         )}
 

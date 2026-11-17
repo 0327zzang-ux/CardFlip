@@ -44,7 +44,15 @@ export const Card3DViewer: React.FC<Card3DViewerProps> = ({
   const gyroOffset = useRef({ x: 0, y: 0 });
   const aspectRef = useRef(1.0);
 
-  const activeSkin = skinId || card.skinId || 'hologram';
+  const activeSkin = skinId || card?.skinId || 'hologram';
+
+  if (!card) {
+    return (
+      <div className={`relative w-full h-full flex items-center justify-center text-slate-500 text-xs ${className}`}>
+        명함 정보를 불러올 수 없습니다.
+      </div>
+    );
+  }
 
   // 1. Three.js 씬 및 정면 고휘도 조명 시스템 초기화
   useEffect(() => {
@@ -422,7 +430,7 @@ function createCardCanvasTexture(card: CardData, skinId: SkinId, isFront: boolea
     ctx.shadowBlur = 8;
     ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 3;
-    ctx.fillText(card.name, 64, 140);
+    ctx.fillText(card?.name || '', 64, 140);
     ctx.shadowColor = 'transparent';
 
     // 소속 태그 배지
@@ -430,12 +438,12 @@ function createCardCanvasTexture(card: CardData, skinId: SkinId, isFront: boolea
     roundRect(ctx, 64, 175, 520, 56, 14, true);
     ctx.fillStyle = '#38bdf8';
     ctx.font = 'bold 26px Pretendard, system-ui, -apple-system, sans-serif';
-    ctx.fillText(card.affiliation, 84, 212);
+    ctx.fillText(card?.affiliation || '', 84, 212);
 
     // 직업/직무
     ctx.fillStyle = '#f8fafc';
     ctx.font = '600 34px Pretendard, system-ui, -apple-system, sans-serif';
-    ctx.fillText(card.occupation, 64, 295);
+    ctx.fillText(card?.occupation || '', 64, 295);
 
     // 미니멀 구분선
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
@@ -448,14 +456,14 @@ function createCardCanvasTexture(card: CardData, skinId: SkinId, isFront: boolea
     // 연락처 및 이메일
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
     ctx.font = '500 28px Pretendard, system-ui, -apple-system, sans-serif';
-    ctx.fillText('✉  ' + card.email, 64, 465);
-    ctx.fillText('☎  ' + card.phone, 64, 520);
+    ctx.fillText('✉  ' + (card?.email || ''), 64, 465);
+    ctx.fillText('☎  ' + (card?.phone || ''), 64, 520);
 
     // 고유 식별자 코드 배지
     ctx.fillStyle = '#38bdf8';
     ctx.font = 'bold 26px monospace';
     ctx.textAlign = 'right';
-    ctx.fillText(card.uniqueCode || '#CARD', 960, 95);
+    ctx.fillText(card?.uniqueCode || '#CARD', 960, 95);
     ctx.textAlign = 'left';
 
     // 엠블럼 데코레이션 서클
@@ -475,7 +483,7 @@ function createCardCanvasTexture(card: CardData, skinId: SkinId, isFront: boolea
     // 바이오 문구
     ctx.fillStyle = '#f8fafc';
     ctx.font = '500 28px sans-serif';
-    wrapText(ctx, '"' + (card.bio || '새로운 디지털 인터랙션을 만듭니다.') + '"', 60, 170, 900, 42);
+    wrapText(ctx, '"' + (card?.bio || '새로운 디지털 인터랙션을 만듭니다.') + '"', 60, 170, 900, 42);
 
     // 링크 헤더
     ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
@@ -483,14 +491,14 @@ function createCardCanvasTexture(card: CardData, skinId: SkinId, isFront: boolea
     ctx.fillText('CONNECT VIA HYPERLINKS', 60, 350);
 
     // 링크 칩 가상 드로잉
-    const links = card.links || [];
+    const links = card?.links || [];
     let lx = 60;
     links.forEach((l) => {
       ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
       roundRect(ctx, lx, 380, 240, 56, 14, true);
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 22px sans-serif';
-      ctx.fillText(l.label, lx + 20, 416);
+      ctx.fillText(l?.label || '', lx + 20, 416);
       lx += 260;
     });
 
@@ -499,7 +507,7 @@ function createCardCanvasTexture(card: CardData, skinId: SkinId, isFront: boolea
     ctx.font = 'bold 20px monospace';
     ctx.fillText('TAP TO FLIP FRONT ↔ BACK', 64, 560);
     ctx.textAlign = 'right';
-    ctx.fillText(card.uniqueCode || '#CARD', 960, 560);
+    ctx.fillText(card?.uniqueCode || '#CARD', 960, 560);
     ctx.textAlign = 'left';
   }
 

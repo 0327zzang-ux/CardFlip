@@ -38,7 +38,8 @@ export const PublicCardView: React.FC<PublicCardViewProps> = ({
     generateCardQRCode(card).then(setQrCodeUrl);
     // 내 지갑에 이미 있는지 확인
     const list = storage.getExchangedCards();
-    const exists = list.some(c => c.uniqueCode.toLowerCase() === card.uniqueCode.toLowerCase());
+    const cardCode = (card?.uniqueCode || '').toLowerCase().trim();
+    const exists = Boolean(cardCode && list.some(c => c && (c.uniqueCode || '').toLowerCase().trim() === cardCode));
     setIsSavedToWallet(exists);
   }, [card]);
 

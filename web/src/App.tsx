@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { type CardData, type SkinId, SKINS, INITIAL_MY_CARDS } from './types/card';
 import { storage } from './services/storage';
+import { decodeCardFromParam } from './services/qr';
 import { Card3DViewer } from './components/Card3DViewer';
 import { PublicCardView } from './components/PublicCardView';
 import { WalletDrawer } from './components/WalletDrawer';
@@ -49,20 +50,39 @@ export default function App() {
     }, 2500);
   }, []);
 
+  // 앱 초기 로드 시 보유 명함을 로컬 네트워크 서버에 동기화
+  useEffect(() => {
+    storage.syncAllMyCardsToServer().catch(() => {});
+  }, []);
+
   // URL 파라미터 파싱을 통한 퍼블릭 카드 조회
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const dParam = params.get('d') || params.get('data');
     const uParam = params.get('u');
     const cParam = params.get('c');
 
-    if (uParam || cParam) {
-      const code = uParam ? (uParam.startsWith('@') ? uParam : `@${uParam}`) : (cParam || '');
-      const matched = storage.findCardByCode(code);
-      if (matched) {
-        setPublicCard(matched);
+    // 1. QR 코드에 직접 담긴 전체 카드 데이터 복원 (타 기기/모바일 카메라 접속 지원)
+    if (dParam) {
+      const decodedCard = decodeCardFromParam(dParam);
+      if (decodedCard && decodedCard.name) {
+        setPublicCard(decodedCard);
+        return;
       }
     }
-  }, []);
+
+    // 2. 고유 ID / 코드 기반 로컬 및 원격 실시간 서버 조회
+    if (uParam || cParam) {
+      const code = uParam ? (uParam.startsWith('@') ? uParam : `@${uParam}`) : (cParam || '');
+      storage.findCardByCodeAsync(code).then((matched) => {
+        if (matched) {
+          setPublicCard(matched);
+        } else {
+          showToast(`⚠️ 해당 명함('${code}')을 찾을 수 없습니다. (스마트폰에서 제작된 경우 같은 Wi-Fi 확인)`);
+        }
+      });
+    }
+  }, [showToast]);
 
   // 홈 화면 대표 명함: 항상 myCards[0] (대표로 설정된 명함 단 한 장만 표시)
   const representativeCard = myCards[0] || INITIAL_MY_CARDS[0];

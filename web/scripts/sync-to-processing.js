@@ -22,8 +22,12 @@ if (!fs.existsSync(backupDir) && fs.existsSync(processingDataDir)) {
   fs.cpSync(processingDataDir, backupDir, { recursive: true });
 }
 
-// 2. dist 내용물을 Processing data 디렉토리로 복사
+// 2. dist 내용물을 Processing data 디렉토리로 복사 (이전 번들 잔여물 정리)
 console.log(`📂 ${distDir} -> ${processingDataDir} 복사 중...`);
+const processingAssetsDir = path.resolve(processingDataDir, 'assets');
+if (fs.existsSync(processingAssetsDir)) {
+  fs.rmSync(processingAssetsDir, { recursive: true, force: true });
+}
 fs.cpSync(distDir, processingDataDir, { recursive: true });
 
 console.log('✅ Processing 4 동기화 완료! 이제 Processing 4 IDE에서 ▶ 버튼을 누르면 최신 React MVP 빌드가 실행됩니다.');

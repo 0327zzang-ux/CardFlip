@@ -180,6 +180,8 @@ void startEmbeddedServer() {
       
       // 정적 파일 핸들러 등록
       server.createContext("/", new StaticFileHandler(sketchPath("data")));
+      // 기기 간(스마트폰 ↔ PC) 실시간 명함 동기화 API 등록 (/api/cards)
+      server.createContext("/api/cards", new CardApiHandler(sketchPath("data/shared_cards.json")));
       server.setExecutor(null); // 기본 단일 스레드 executor
       server.start();
       
@@ -325,6 +327,134 @@ class StaticFileHandler implements HttpHandler {
       case "woff2":return "font/woff2";
       case "woff": return "font/woff";
       default:     return "application/octet-stream";
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// 기기 간(스마트폰 ↔ PC) 실시간 명함 동기화 API 핸들러 (/api/cards)
+// -------------------------------------------------------------
+class CardApiHandler implements HttpHandler {
+  private final String filePath;
+  
+  public CardApiHandler(String filePath) {
+    this.filePath = filePath;
+  }
+  
+  @Override
+  public void handle(HttpExchange exchange) throws IOException {
+    Headers headers = exchange.getResponseHeaders();
+    headers.set("Access-Control-Allow-Origin", "*");
+    headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    headers.set("Access-Control-Allow-Headers", "Content-Type");
+    
+    String method = exchange.getRequestMethod().toUpperCase();
+    
+    if (method.equals("OPTIONS")) {
+      exchange.sendResponseHeaders(204, -1);
+      exchange.close();
+      return;
+    }
+    
+    File file = new File(filePath);
+    JSONObject root;
+    try {
+      if (file.exists()) {
+        root = loadJSONObject(filePath);
+      } else {
+        root = new JSONObject();
+      }
+    } catch (Exception e) {
+      root = new JSONObject();
+    }
+    if (root == null) {
+      root = new JSONObject();
+    }
+    
+    if (method.equals("POST")) {
+      // 1. 스마트폰/PC에서 생성한 명함 수신
+      InputStream is = exchange.getRequestBody();
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      byte[] buf = new byte[1024];
+      int n;
+      while ((n = is.read(buf)) != -1) {
+        baos.write(buf, 0, n);
+      }
+      String body = baos.toString("UTF-8");
+      
+      try {
+        JSONObject card = parseJSONObject(body);
+        if (card != null && card.hasKey("uniqueCode")) {
+          String key = card.getString("uniqueCode").replaceAll("^@", "").toLowerCase().trim();
+          root.setJSONObject(key, card);
+          saveJSONObject(root, filePath);
+          
+          addLog("Card Synced to Server: @" + key);
+          
+          byte[] resp = "{\"success\":true}".getBytes("UTF-8");
+          headers.set("Content-Type", "application/json; charset=UTF-8");
+          exchange.sendResponseHeaders(200, resp.length);
+          OutputStream os = exchange.getResponseBody();
+          os.write(resp);
+          os.close();
+          return;
+        }
+      } catch (Exception e) {
+        println("[WARN] Failed to parse card JSON: " + e.getMessage());
+      }
+      
+      byte[] err = "{\"error\":\"Invalid card data\"}".getBytes("UTF-8");
+      exchange.sendResponseHeaders(400, err.length);
+      exchange.close();
+      return;
+    }
+    
+    if (method.equals("GET")) {
+      // 2. ID로 조회 (?code=@my_id)
+      String query = exchange.getRequestURI().getRawQuery();
+      String codeToFind = "";
+      if (query != null) {
+        String[] pairs = query.split("&");
+        for (String pair : pairs) {
+          int idx = pair.indexOf("=");
+          if (idx > 0 && pair.substring(0, idx).equals("code")) {
+            codeToFind = URLDecoder.decode(pair.substring(idx + 1), "UTF-8");
+            break;
+          }
+        }
+      }
+      
+      if (!codeToFind.isEmpty()) {
+        String key = codeToFind.replaceAll("^@", "").toLowerCase().trim();
+        if (root.hasKey(key)) {
+          JSONObject found = root.getJSONObject(key);
+          byte[] resp = found.toString().getBytes("UTF-8");
+          headers.set("Content-Type", "application/json; charset=UTF-8");
+          exchange.sendResponseHeaders(200, resp.length);
+          OutputStream os = exchange.getResponseBody();
+          os.write(resp);
+          os.close();
+          addLog("Card Found via API: @" + key);
+          return;
+        } else {
+          byte[] notFound = "{\"error\":\"Card not found\"}".getBytes("UTF-8");
+          headers.set("Content-Type", "application/json; charset=UTF-8");
+          exchange.sendResponseHeaders(404, notFound.length);
+          OutputStream os = exchange.getResponseBody();
+          os.write(notFound);
+          os.close();
+          return;
+        }
+      }
+      
+      // 전체 카드 목록 반환
+      byte[] resp = root.toString().getBytes("UTF-8");
+      headers.set("Content-Type", "application/json; charset=UTF-8");
+      exchange.sendResponseHeaders(200, resp.length);
+      OutputStream os = exchange.getResponseBody();
+      os.write(resp);
+      os.close();
+      return;
     }
   }
 }

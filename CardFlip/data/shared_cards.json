@@ -1,0 +1,105 @@
+{
+  "my_id": {
+    "occupation": "",
+    "uniqueCode": "@my_id",
+    "affiliation": "",
+    "phone": "",
+    "isPrimary": false,
+    "name": "곽두팔",
+    "bio": "",
+    "skinId": "glass",
+    "links": [],
+    "id": "card_1794898963321",
+    "email": ""
+  },
+  "minsu_design": {
+    "occupation": "UI/UX 디자이너",
+    "uniqueCode": "@minsu_design",
+    "affiliation": "네오스튜디오 (Neo Studio)",
+    "phone": "010-8241-9920",
+    "isPrimary": false,
+    "name": "김민수",
+    "bio": "인터랙티브 3D 경험과 감각적인 디지털 인터페이스를 설계합니다.",
+    "skinId": "hologram",
+    "links": [
+      {
+        "label": "🎨 포트폴리오",
+        "platform": "portfolio",
+        "url": "https://minsu-portfolio.web.app"
+      },
+      {
+        "label": "📝 노션 이력서",
+        "platform": "notion",
+        "url": "https://notion.so/minsu-resume"
+      },
+      {
+        "label": "📷 인스타그램",
+        "platform": "instagram",
+        "url": "https://instagram.com/minsu_ui"
+      }
+    ],
+    "id": "my_card_01",
+    "email": "minsu.design@neo.io"
+  },
+  "my_luv": {
+    "occupation": "",
+    "uniqueCode": "@my_luv",
+    "affiliation": "",
+    "phone": "",
+    "isPrimary": true,
+    "name": "박상",
+    "bio": "",
+    "skinId": "glass",
+    "links": [],
+    "id": "card_1794898222104",
+    "email": ""
+  },
+  "minsu_student": {
+    "occupation": "학부 연구생 (디자인학부)",
+    "uniqueCode": "@minsu_student",
+    "affiliation": "한국대학교 뉴미디어아트학과",
+    "phone": "010-8241-9920",
+    "isPrimary": true,
+    "name": "김민수",
+    "bio": "Processing 4와 Three.js 기반의 피지컬 인터랙션을 연구하고 있습니다.",
+    "skinId": "matte",
+    "links": [
+      {
+        "label": "💻 GitHub",
+        "platform": "github",
+        "url": "https://github.com/minsu-kim"
+      },
+      {
+        "label": "🏫 연구실 프로젝트",
+        "platform": "website",
+        "url": "https://lab.hankuk.ac.kr"
+      }
+    ],
+    "id": "my_card_02",
+    "email": "minsu.kim@hankuk.ac.kr"
+  },
+  "minsu_creator": {
+    "occupation": "3D 제너레이티브 아티스트",
+    "uniqueCode": "@minsu_creator",
+    "affiliation": "인디 크리에이티브 크루",
+    "phone": "010-8241-9920",
+    "isPrimary": false,
+    "name": "MINSU (김민수)",
+    "bio": "WebGL & 실시간 셰이더로 디지털 공간 아트를 만듭니다.",
+    "skinId": "neon",
+    "links": [
+      {
+        "label": "✨ 아카이브",
+        "platform": "portfolio",
+        "url": "https://minsu.art"
+      },
+      {
+        "label": "🎬 튜토리얼 채널",
+        "platform": "youtube",
+        "url": "https://youtube.com/@minsu_3d"
+      }
+    ],
+    "id": "my_card_03",
+    "email": "creator.minsu@gmail.com"
+  }
+}

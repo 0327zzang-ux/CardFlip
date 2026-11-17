@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import type { ExchangedCardData, CardData } from '../types/card';
 import { storage } from '../services/storage';
 import { downloadVCard } from '../services/vcard';
+import { generateCardQRCode } from '../services/qr';
 import {
   X,
   Search,
@@ -14,7 +15,8 @@ import {
   RotateCcw,
   Trash2,
   Eye,
-  UserCheck
+  UserCheck,
+  QrCode
 } from 'lucide-react';
 
 interface WalletDrawerProps {
@@ -35,11 +37,36 @@ export const WalletDrawer: React.FC<WalletDrawerProps> = ({
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [cards, setCards] = useState<ExchangedCardData[]>(() => storage.getExchangedCards());
+  const [qrCard, setQrCard] = useState<ExchangedCardData | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+
+  const handleOpenQR = (card: ExchangedCardData) => {
+    setQrCard(card);
+    generateCardQRCode(card).then(setQrCodeUrl);
+  };
 
   // 데이터 새로고침
-  const reloadCards = () => {
+  const reloadCards = useCallback(() => {
     setCards(storage.getExchangedCards());
-  };
+  }, []);
+
+  // 1. 드로어가 열릴 때마다 로컬 스토리지 최신 명함 목록으로 갱신
+  useEffect(() => {
+    if (isOpen) {
+      reloadCards();
+    }
+  }, [isOpen, reloadCards]);
+
+  // 2. 앱 내 어디서든 명함이 추가/수정/삭제되면 실시간 감지하여 자동 갱신
+  useEffect(() => {
+    const handleCardsUpdated = () => {
+      reloadCards();
+    };
+    window.addEventListener('cardflip_cards_updated', handleCardsUpdated);
+    return () => {
+      window.removeEventListener('cardflip_cards_updated', handleCardsUpdated);
+    };
+  }, [reloadCards]);
 
   // 즐겨찾기 토글
   const handleToggleStar = (cardId: string, e: React.MouseEvent) => {
@@ -73,20 +100,21 @@ export const WalletDrawer: React.FC<WalletDrawerProps> = ({
     }
   };
 
-  // 검색 및 탭 필터링
+  // 검색 및 탭 필터링 (null-safe)
   const filteredCards = useMemo(() => {
     return cards.filter(c => {
+      if (!c) return false;
       const q = searchQuery.toLowerCase().trim();
       const matchSearch =
         !q ||
-        c.name.toLowerCase().includes(q) ||
-        c.affiliation.toLowerCase().includes(q) ||
-        c.occupation.toLowerCase().includes(q) ||
-        c.uniqueCode.toLowerCase().includes(q);
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.affiliation || '').toLowerCase().includes(q) ||
+        (c.occupation || '').toLowerCase().includes(q) ||
+        (c.uniqueCode || '').toLowerCase().includes(q);
 
       if (!matchSearch) return false;
 
-      if (activeTab === 'starred') return c.isStarred;
+      if (activeTab === 'starred') return Boolean(c.isStarred);
       return true;
     });
   }, [cards, searchQuery, activeTab]);
@@ -269,6 +297,10 @@ export const WalletDrawer: React.FC<WalletDrawerProps> = ({
                         downloadVCard(c);
                         onShowToast(`📲 '${c.name}'님의 연락처가 다운로드되었습니다.`);
                       }}
+                      onOpenQR={e => {
+                        e.stopPropagation();
+                        handleOpenQR(c);
+                      }}
                     />
                   ))}
                 </div>
@@ -291,6 +323,10 @@ export const WalletDrawer: React.FC<WalletDrawerProps> = ({
                   downloadVCard(c);
                   onShowToast(`📲 '${c.name}'님의 연락처가 다운로드되었습니다.`);
                 }}
+                onOpenQR={e => {
+                  e.stopPropagation();
+                  handleOpenQR(c);
+                }}
               />
             ))
           )}
@@ -306,6 +342,45 @@ export const WalletDrawer: React.FC<WalletDrawerProps> = ({
             <span>데모 샘플 데이터 초기화</span>
           </button>
         </div>
+
+        {/* 명함첩 내 카드 QR 팝업 모달 */}
+        {qrCard && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-[#181926] border border-white/15 rounded-3xl p-6 max-w-xs w-full flex flex-col items-center text-center shadow-2xl space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                <QrCode className="w-6 h-6" />
+              </div>
+
+              <div>
+                <h3 className="font-bold text-base text-white">{qrCard.name}님의 명함 QR</h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  스마트폰 카메라로 스캔하면 이 명함이 즉시 열립니다.
+                </p>
+              </div>
+
+              {qrCodeUrl ? (
+                <div className="p-3 bg-white rounded-2xl shadow-inner">
+                  <img src={qrCodeUrl} alt="Card QR Code" className="w-48 h-48 block" />
+                </div>
+              ) : (
+                <div className="w-48 h-48 flex items-center justify-center text-slate-400 text-xs">
+                  QR 생성 중...
+                </div>
+              )}
+
+              <div className="text-[11px] font-mono text-slate-400 break-all px-2">
+                {qrCard.uniqueCode}
+              </div>
+
+              <button
+                onClick={() => setQrCard(null)}
+                className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-sm font-semibold text-white transition-colors"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -317,6 +392,7 @@ interface CardListItemProps {
   onToggleStar: (e: React.MouseEvent) => void;
   onDelete: (e: React.MouseEvent) => void;
   onSaveContact: (e: React.MouseEvent) => void;
+  onOpenQR: (e: React.MouseEvent) => void;
 }
 
 const CardListItem: React.FC<CardListItemProps> = ({
@@ -324,7 +400,8 @@ const CardListItem: React.FC<CardListItemProps> = ({
   onSelect,
   onToggleStar,
   onDelete,
-  onSaveContact
+  onSaveContact,
+  onOpenQR
 }) => {
   return (
     <div
@@ -334,11 +411,11 @@ const CardListItem: React.FC<CardListItemProps> = ({
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-white">{card.name}</span>
-            <span className="text-[11px] font-mono text-sky-400">{card.uniqueCode}</span>
+            <span className="font-bold text-sm text-white">{card.name || '이름 없음'}</span>
+            <span className="text-[11px] font-mono text-sky-400">{card.uniqueCode || '@card'}</span>
           </div>
-          <div className="text-xs text-slate-300 mt-0.5">{card.affiliation}</div>
-          <div className="text-[11px] text-slate-400">{card.occupation}</div>
+          <div className="text-xs text-slate-300 mt-0.5">{card.affiliation || ''}</div>
+          <div className="text-[11px] text-slate-400">{card.occupation || ''}</div>
         </div>
 
         <div className="flex items-center gap-1">
@@ -380,9 +457,20 @@ const CardListItem: React.FC<CardListItemProps> = ({
           </a>
         </div>
 
-        <div className="flex items-center gap-1 text-slate-500 group-hover:text-slate-300 transition-colors">
-          <Eye className="w-3 h-3" />
-          <span>3D 보기</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onOpenQR}
+            className="flex items-center gap-1 text-slate-400 hover:text-sky-300 transition-colors"
+            title="QR 코드 보기"
+          >
+            <QrCode className="w-3 h-3 text-sky-400" />
+            <span>QR</span>
+          </button>
+
+          <div className="flex items-center gap-1 text-slate-500 group-hover:text-slate-300 transition-colors">
+            <Eye className="w-3 h-3" />
+            <span>3D 보기</span>
+          </div>
         </div>
       </div>
     </div>
