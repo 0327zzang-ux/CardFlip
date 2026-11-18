@@ -1,0 +1,450 @@
+{
+  "pc": {
+    "exchangedCards": [
+      {
+        "occupation": "",
+        "bio": "스마트폰으로부터 교환받은 명함입니다.",
+        "isStarred": true,
+        "memo": "스마트폰에서 Wi-Fi 교환 완료",
+        "skinId": "glass",
+        "exchangedAt": "2026-11-18 12:20",
+        "uniqueCode": "@my_luv",
+        "affiliation": "스마트폰 사용자",
+        "phone": "",
+        "isPrimary": false,
+        "name": "박상",
+        "links": [],
+        "id": "card_1794898222104",
+        "email": ""
+      },
+      {
+        "occupation": "프로덕트 디자이너",
+        "bio": "금융을 더 쉽고 간결하게 만드는 사용자 경험을 디자인합니다.",
+        "isStarred": true,
+        "skinId": "glass",
+        "tags": [
+          "디자인",
+          "토스"
+        ],
+        "exchangedAt": "2026-11-10 14:32",
+        "uniqueCode": "@sarah_art",
+        "affiliation": "토스 (Toss)",
+        "phone": "010-3321-4455",
+        "name": "이서연",
+        "links": [{
+          "label": "디자인 블로그",
+          "platform": "portfolio",
+          "url": "https://toss.tech"
+        }],
+        "id": "ex_01",
+        "email": "seoyeon.lee@toss.im"
+      },
+      {
+        "occupation": "프론트엔드 리드 개발자",
+        "bio": "초대규모 트래픽 웹 프론트엔드 아키텍처와 WebGL 렌더링 최적화 연구 중.",
+        "isStarred": true,
+        "skinId": "neon",
+        "tags": [
+          "개발",
+          "네이버"
+        ],
+        "exchangedAt": "2026-11-12 11:15",
+        "uniqueCode": "@hyunwoo_dev",
+        "affiliation": "네이버 클라우드",
+        "phone": "010-9943-1204",
+        "name": "박현우",
+        "links": [{
+          "label": "GitHub 프로필",
+          "platform": "github",
+          "url": "https://github.com"
+        }],
+        "id": "ex_02",
+        "email": "hyunwoo.park@navercorp.com"
+      },
+      {
+        "occupation": "프로덕트 오너 (PO)",
+        "bio": "지역 커뮤니티의 연결과 로컬 커머스 혁신을 주도합니다.",
+        "isStarred": false,
+        "skinId": "gold",
+        "tags": [
+          "기획",
+          "당근"
+        ],
+        "exchangedAt": "2026-11-13 18:20",
+        "uniqueCode": "@chloe_pm",
+        "affiliation": "당근마켓",
+        "phone": "010-5512-8871",
+        "name": "최지우",
+        "links": [{
+          "label": "당근 팀 블로그",
+          "platform": "website",
+          "url": "https://medium.com/daangn"
+        }],
+        "id": "ex_03",
+        "email": "jiwoo.choi@daangn.com"
+      }
+    ],
+    "activeIndex": 5,
+    "myCards": [
+      {
+        "occupation": "",
+        "uniqueCode": "@my_id",
+        "affiliation": "PC 제작 명함",
+        "phone": "",
+        "isPrimary": true,
+        "name": "곽두팔",
+        "bio": "PC에서 제작한 내 명함입니다.",
+        "skinId": "glass",
+        "links": [],
+        "id": "card_1794898963321",
+        "email": ""
+      },
+      {
+        "occupation": "UI/UX 디자이너",
+        "uniqueCode": "@minsu_design",
+        "affiliation": "네오스튜디오 (Neo Studio)",
+        "phone": "010-8241-9920",
+        "isPrimary": false,
+        "name": "김민수",
+        "bio": "인터랙티브 3D 경험과 감각적인 디지털 인터페이스를 설계합니다.",
+        "skinId": "hologram",
+        "links": [
+          {
+            "label": "🎨 포트폴리오",
+            "platform": "portfolio",
+            "url": "https://minsu-portfolio.web.app"
+          },
+          {
+            "label": "📝 노션 이력서",
+            "platform": "notion",
+            "url": "https://notion.so/minsu-resume"
+          },
+          {
+            "label": "📷 인스타그램",
+            "platform": "instagram",
+            "url": "https://instagram.com/minsu_ui"
+          }
+        ],
+        "id": "my_card_01",
+        "email": "minsu.design@neo.io"
+      },
+      {
+        "occupation": "학부 연구생 (디자인학부)",
+        "uniqueCode": "@minsu_student",
+        "affiliation": "한국대학교 뉴미디어아트학과",
+        "phone": "010-8241-9920",
+        "isPrimary": false,
+        "name": "김민수",
+        "bio": "Processing 4와 Three.js 기반의 피지컬 인터랙션을 연구하고 있습니다.",
+        "skinId": "matte",
+        "links": [
+          {
+            "label": "💻 GitHub",
+            "platform": "github",
+            "url": "https://github.com/minsu-kim"
+          },
+          {
+            "label": "🏫 연구실 프로젝트",
+            "platform": "website",
+            "url": "https://lab.hankuk.ac.kr"
+          }
+        ],
+        "id": "my_card_02",
+        "email": "minsu.kim@hankuk.ac.kr"
+      },
+      {
+        "occupation": "3D 제너레이티브 아티스트",
+        "uniqueCode": "@minsu_creator",
+        "affiliation": "인디 크리에이티브 크루",
+        "phone": "010-8241-9920",
+        "isPrimary": false,
+        "name": "MINSU (김민수)",
+        "bio": "WebGL & 실시간 셰이더로 디지털 공간 아트를 만듭니다.",
+        "skinId": "neon",
+        "links": [
+          {
+            "label": "✨ 아카이브",
+            "platform": "portfolio",
+            "url": "https://minsu.art"
+          },
+          {
+            "label": "🎬 튜토리얼 채널",
+            "platform": "youtube",
+            "url": "https://youtube.com/@minsu_3d"
+          }
+        ],
+        "id": "my_card_03",
+        "email": "creator.minsu@gmail.com"
+      },
+      {
+        "occupation": "상남자",
+        "uniqueCode": "@my_man",
+        "affiliation": "pc태생 남자",
+        "phone": "",
+        "isPrimary": false,
+        "name": "마정필",
+        "bio": "",
+        "skinId": "hologram",
+        "links": [],
+        "id": "card_1794979111644",
+        "email": ""
+      },
+      {
+        "occupation": "농구선수",
+        "uniqueCode": "@my_frd",
+        "affiliation": "슬램덩크",
+        "phone": "",
+        "isPrimary": false,
+        "name": "표치수",
+        "bio": "",
+        "skinId": "hologram",
+        "links": [],
+        "id": "card_1794979715311",
+        "email": ""
+      }
+    ],
+    "deviceId": "dev_phone_f2nqtvr0",
+    "updatedAt": "2026-11-18T05:28:35.566Z"
+  },
+  "devices": {
+    "dev_pc_host": {
+      "exchangedCards": [
+        {
+          "occupation": "",
+          "bio": "스마트폰으로부터 교환받은 명함입니다.",
+          "isStarred": true,
+          "memo": "스마트폰에서 Wi-Fi 교환 완료",
+          "skinId": "glass",
+          "exchangedAt": "2026-11-18 12:20",
+          "uniqueCode": "@my_luv",
+          "affiliation": "스마트폰 사용자",
+          "phone": "",
+          "isPrimary": false,
+          "name": "박상",
+          "links": [],
+          "id": "card_1794898222104",
+          "email": ""
+        },
+        {
+          "occupation": "프로덕트 디자이너",
+          "bio": "금융을 더 쉽고 간결하게 만드는 사용자 경험을 디자인합니다.",
+          "isStarred": true,
+          "skinId": "glass",
+          "tags": [
+            "디자인",
+            "토스"
+          ],
+          "exchangedAt": "2026-11-10 14:32",
+          "uniqueCode": "@sarah_art",
+          "affiliation": "토스 (Toss)",
+          "phone": "010-3321-4455",
+          "name": "이서연",
+          "links": [{
+            "label": "디자인 블로그",
+            "platform": "portfolio",
+            "url": "https://toss.tech"
+          }],
+          "id": "ex_01",
+          "email": "seoyeon.lee@toss.im"
+        },
+        {
+          "occupation": "프론트엔드 리드 개발자",
+          "bio": "초대규모 트래픽 웹 프론트엔드 아키텍처와 WebGL 렌더링 최적화 연구 중.",
+          "isStarred": true,
+          "skinId": "neon",
+          "tags": [
+            "개발",
+            "네이버"
+          ],
+          "exchangedAt": "2026-11-12 11:15",
+          "uniqueCode": "@hyunwoo_dev",
+          "affiliation": "네이버 클라우드",
+          "phone": "010-9943-1204",
+          "name": "박현우",
+          "links": [{
+            "label": "GitHub 프로필",
+            "platform": "github",
+            "url": "https://github.com"
+          }],
+          "id": "ex_02",
+          "email": "hyunwoo.park@navercorp.com"
+        },
+        {
+          "occupation": "프로덕트 오너 (PO)",
+          "bio": "지역 커뮤니티의 연결과 로컬 커머스 혁신을 주도합니다.",
+          "isStarred": false,
+          "skinId": "gold",
+          "tags": [
+            "기획",
+            "당근"
+          ],
+          "exchangedAt": "2026-11-13 18:20",
+          "uniqueCode": "@chloe_pm",
+          "affiliation": "당근마켓",
+          "phone": "010-5512-8871",
+          "name": "최지우",
+          "links": [{
+            "label": "당근 팀 블로그",
+            "platform": "website",
+            "url": "https://medium.com/daangn"
+          }],
+          "id": "ex_03",
+          "email": "jiwoo.choi@daangn.com"
+        }
+      ],
+      "activeIndex": 0,
+      "myCards": [
+        {
+          "occupation": "UI/UX 디자이너",
+          "uniqueCode": "@minsu_design",
+          "affiliation": "네오스튜디오 (Neo Studio)",
+          "phone": "010-8241-9920",
+          "isPrimary": true,
+          "name": "김민수",
+          "bio": "인터랙티브 3D 경험과 감각적인 디지털 인터페이스를 설계합니다.",
+          "skinId": "hologram",
+          "links": [
+            {
+              "label": "🎨 포트폴리오",
+              "platform": "portfolio",
+              "url": "https://minsu-portfolio.web.app"
+            },
+            {
+              "label": "📝 노션 이력서",
+              "platform": "notion",
+              "url": "https://notion.so/minsu-resume"
+            },
+            {
+              "label": "📷 인스타그램",
+              "platform": "instagram",
+              "url": "https://instagram.com/minsu_ui"
+            }
+          ],
+          "id": "my_card_01",
+          "email": "minsu.design@neo.io"
+        },
+        {
+          "occupation": "학부 연구생 (디자인학부)",
+          "uniqueCode": "@minsu_student",
+          "affiliation": "한국대학교 뉴미디어아트학과",
+          "phone": "010-8241-9920",
+          "isPrimary": false,
+          "name": "김민수",
+          "bio": "Processing 4와 Three.js 기반의 피지컬 인터랙션을 연구하고 있습니다.",
+          "skinId": "matte",
+          "links": [
+            {
+              "label": "💻 GitHub",
+              "platform": "github",
+              "url": "https://github.com/minsu-kim"
+            },
+            {
+              "label": "🏫 연구실 프로젝트",
+              "platform": "website",
+              "url": "https://lab.hankuk.ac.kr"
+            }
+          ],
+          "id": "my_card_02",
+          "email": "minsu.kim@hankuk.ac.kr"
+        },
+        {
+          "occupation": "3D 제너레이티브 아티스트",
+          "uniqueCode": "@minsu_creator",
+          "affiliation": "인디 크리에이티브 크루",
+          "phone": "010-8241-9920",
+          "isPrimary": false,
+          "name": "MINSU (김민수)",
+          "bio": "WebGL & 실시간 셰이더로 디지털 공간 아트를 만듭니다.",
+          "skinId": "neon",
+          "links": [
+            {
+              "label": "✨ 아카이브",
+              "platform": "portfolio",
+              "url": "https://minsu.art"
+            },
+            {
+              "label": "🎬 튜토리얼 채널",
+              "platform": "youtube",
+              "url": "https://youtube.com/@minsu_3d"
+            }
+          ],
+          "id": "my_card_03",
+          "email": "creator.minsu@gmail.com"
+        },
+        {
+          "occupation": "",
+          "uniqueCode": "@my_id",
+          "affiliation": "PC 제작 명함",
+          "phone": "",
+          "isPrimary": false,
+          "name": "곽두팔",
+          "bio": "PC에서 제작한 내 명함입니다.",
+          "skinId": "glass",
+          "links": [],
+          "id": "card_1794898963321",
+          "email": ""
+        }
+      ],
+      "deviceName": "PC 호스트 (곽두팔)",
+      "updatedAt": "2026-11-18T14:25:00.000Z"
+    },
+    "dev_phone_demo": {
+      "exchangedCards": [
+        {
+          "occupation": "",
+          "bio": "PC로부터 교환받은 명함입니다.",
+          "isStarred": true,
+          "memo": "PC에서 Wi-Fi 교환 완료",
+          "skinId": "glass",
+          "exchangedAt": "2026-11-18 12:20",
+          "uniqueCode": "@my_id",
+          "affiliation": "PC 사용자",
+          "phone": "",
+          "isPrimary": false,
+          "name": "곽두팔",
+          "links": [],
+          "id": "card_1794898963321",
+          "email": ""
+        },
+        {
+          "occupation": "프로덕트 디자이너",
+          "bio": "금융을 더 쉽고 간결하게 만드는 사용자 경험을 디자인합니다.",
+          "isStarred": true,
+          "skinId": "glass",
+          "tags": [
+            "디자인",
+            "토스"
+          ],
+          "exchangedAt": "2026-11-10 14:32",
+          "uniqueCode": "@sarah_art",
+          "affiliation": "토스 (Toss)",
+          "phone": "010-3321-4455",
+          "name": "이서연",
+          "links": [{
+            "label": "디자인 블로그",
+            "platform": "portfolio",
+            "url": "https://toss.tech"
+          }],
+          "id": "ex_01",
+          "email": "seoyeon.lee@toss.im"
+        }
+      ],
+      "activeIndex": 0,
+      "myCards": [{
+        "occupation": "",
+        "uniqueCode": "@my_luv",
+        "affiliation": "스마트폰 제작 명함",
+        "phone": "",
+        "isPrimary": true,
+        "name": "박상",
+        "bio": "스마트폰에서 제작한 내 명함입니다.",
+        "skinId": "glass",
+        "links": [],
+        "id": "card_1794898222104",
+        "email": ""
+      }],
+      "deviceName": "스마트폰 (박상)",
+      "updatedAt": "2026-11-18T14:25:00.000Z"
+    }
+  }
+}

@@ -50,10 +50,35 @@ export default function App() {
     }, 2500);
   }, []);
 
-  // 앱 초기 로드 시 보유 명함을 로컬 네트워크 서버에 동기화
+  // 앱 초기 로드 시: 서버 파일에 보존된 최신 상태(내 명함첩, 교환 명함, 활성 인덱스) 자동 복원
   useEffect(() => {
-    storage.syncAllMyCardsToServer().catch(() => {});
-  }, []);
+    let isMounted = true;
+    storage.fetchInitialStateFromServer().then((result) => {
+      if (!isMounted) return;
+      if (result.restored) {
+        setMyCards(result.myCards);
+        setActiveIdx(result.activeIndex);
+        showToast('💾 서버에 저장된 명함 데이터를 안전하게 복원했습니다.');
+      } else {
+        // 서버에 아직 저장된 데이터가 없는 경우, 현재 초기 명함들을 서버로 백업
+        storage.syncAllMyCardsToServer().catch(() => {});
+        storage.syncStateToServer().catch(() => {});
+      }
+    }).catch(() => {});
+
+    // 명함 데이터 갱신 이벤트 수신
+    const handleCardsUpdated = () => {
+      if (!isMounted) return;
+      setMyCards(storage.getMyCards());
+      setActiveIdx(storage.getActiveCardIndex());
+    };
+    window.addEventListener('cardflip_cards_updated', handleCardsUpdated);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('cardflip_cards_updated', handleCardsUpdated);
+    };
+  }, [showToast]);
 
   // URL 파라미터 파싱을 통한 퍼블릭 카드 조회
   useEffect(() => {

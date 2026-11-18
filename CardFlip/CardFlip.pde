@@ -182,6 +182,8 @@ void startEmbeddedServer() {
       server.createContext("/", new StaticFileHandler(sketchPath("data")));
       // 기기 간(스마트폰 ↔ PC) 실시간 명함 동기화 API 등록 (/api/cards)
       server.createContext("/api/cards", new CardApiHandler(sketchPath("data/shared_cards.json")));
+      // 앱 전체 상태(내 명함첩, 교환 명함, 활성 인덱스) 영구 보존 API (/api/sync)
+      server.createContext("/api/sync", new SyncApiHandler(sketchPath("data/app_state.json")));
       server.setExecutor(null); // 기본 단일 스레드 executor
       server.start();
       
@@ -453,6 +455,146 @@ class CardApiHandler implements HttpHandler {
       exchange.sendResponseHeaders(200, resp.length);
       OutputStream os = exchange.getResponseBody();
       os.write(resp);
+      os.close();
+      return;
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// 앱 전체 상태(내 명함첩, 교환 명함, 활성 인덱스) 영구 보존 API (/api/sync)
+// -------------------------------------------------------------
+class SyncApiHandler implements HttpHandler {
+  private final String filePath;
+  
+  public SyncApiHandler(String filePath) {
+    this.filePath = filePath;
+  }
+  
+  @Override
+  public void handle(HttpExchange exchange) throws IOException {
+    Headers headers = exchange.getResponseHeaders();
+    headers.set("Access-Control-Allow-Origin", "*");
+    headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    headers.set("Access-Control-Allow-Headers", "Content-Type");
+    
+    String method = exchange.getRequestMethod().toUpperCase();
+    
+    if (method.equals("OPTIONS")) {
+      exchange.sendResponseHeaders(204, -1);
+      exchange.close();
+      return;
+    }
+    
+    File file = new File(filePath);
+    JSONObject root;
+    try {
+      if (file.exists()) {
+        root = loadJSONObject(filePath);
+      } else {
+        root = new JSONObject();
+      }
+    } catch (Exception e) {
+      root = new JSONObject();
+    }
+    if (root == null) root = new JSONObject();
+    
+    JSONObject devices;
+    if (root.hasKey("devices")) {
+      devices = root.getJSONObject("devices");
+    } else {
+      devices = new JSONObject();
+      root.setJSONObject("devices", devices);
+    }
+    
+    // 쿼리 파라미터에서 dev 파싱 (?dev=device_id)
+    String query = exchange.getRequestURI().getRawQuery();
+    String queryDev = "";
+    if (query != null) {
+      String[] pairs = query.split("&");
+      for (String pair : pairs) {
+        int idx = pair.indexOf("=");
+        if (idx > 0 && pair.substring(0, idx).equals("dev")) {
+          try {
+            queryDev = URLDecoder.decode(pair.substring(idx + 1), "UTF-8").trim();
+          } catch (Exception e) {}
+          break;
+        }
+      }
+    }
+    
+    // 1. 상태 저장 (POST)
+    if (method.equals("POST")) {
+      InputStream is = exchange.getRequestBody();
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      byte[] buf = new byte[2048];
+      int n;
+      while ((n = is.read(buf)) != -1) {
+        baos.write(buf, 0, n);
+      }
+      String body = baos.toString("UTF-8");
+      
+      try {
+        JSONObject payload = parseJSONObject(body);
+        if (payload != null) {
+          String devId = queryDev;
+          if (devId.isEmpty() && payload.hasKey("deviceId")) {
+            devId = payload.getString("deviceId");
+          }
+          if (devId.isEmpty()) devId = "dev_pc_host";
+          
+          devices.setJSONObject(devId, payload);
+          root.setJSONObject("devices", devices);
+          saveJSONObject(root, filePath);
+          addLog("Device State Persisted: [" + devId + "]");
+          
+          byte[] resp = ("{\"success\":true,\"deviceId\":\"" + devId + "\"}").getBytes("UTF-8");
+          headers.set("Content-Type", "application/json; charset=UTF-8");
+          exchange.sendResponseHeaders(200, resp.length);
+          OutputStream os = exchange.getResponseBody();
+          os.write(resp);
+          os.close();
+          return;
+        }
+      } catch (Exception e) {
+        println("[WARN] Failed to parse sync state JSON: " + e.getMessage());
+      }
+      
+      byte[] err = "{\"error\":\"Invalid state JSON\"}".getBytes("UTF-8");
+      exchange.sendResponseHeaders(400, err.length);
+      exchange.close();
+      return;
+    }
+    
+    // 2. 상태 불러오기 (GET)
+    if (method.equals("GET")) {
+      String devId = queryDev.isEmpty() ? "dev_pc_host" : queryDev;
+      if (devices.hasKey(devId)) {
+        JSONObject devState = devices.getJSONObject(devId);
+        byte[] resp = devState.toString().getBytes("UTF-8");
+        headers.set("Content-Type", "application/json; charset=UTF-8");
+        exchange.sendResponseHeaders(200, resp.length);
+        OutputStream os = exchange.getResponseBody();
+        os.write(resp);
+        os.close();
+        addLog("Device State Restored: [" + devId + "]");
+        return;
+      }
+      
+      byte[] notFound = ("{\"empty\":true,\"deviceId\":\"" + devId + "\"}").getBytes("UTF-8");
+      headers.set("Content-Type", "application/json; charset=UTF-8");
+      exchange.sendResponseHeaders(404, notFound.length);
+      OutputStream os = exchange.getResponseBody();
+      os.write(notFound);
+      os.close();
+      return;
+    }
+      
+      byte[] notFound = "{\"empty\":true}".getBytes("UTF-8");
+      headers.set("Content-Type", "application/json; charset=UTF-8");
+      exchange.sendResponseHeaders(404, notFound.length);
+      OutputStream os = exchange.getResponseBody();
+      os.write(notFound);
       os.close();
       return;
     }
